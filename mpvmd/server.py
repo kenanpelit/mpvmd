@@ -1,22 +1,61 @@
 import logging
 import asyncio
+from typing import Dict, List
 from mpv import MPV
 from mpvmd import transport, settings
 
 
-class Server:
-    def __init__(self):
-        self._handlers = {
-            'play': self._handle_msg_play,
-            'pause': self._handle_msg_pause,
-            'play-pause': self._handle_msg_play_pause,
-            'stop': self._handle_msg_stop,
-        }
+class Command:
+    name: str
+    subclasses: List['Command'] = []
 
+    def __init_subclass__(cls, **kwargs):
+        Command.subclasses.append(cls())
+
+    def run(self, server: 'Server', request) -> Dict:
+        raise NotImplementedError()
+
+
+class PlayCommand(Command):
+    name = 'play'
+
+    def run(self, server: 'Server', request) -> Dict:
+        server.mpv.pause = False
+        if 'file' in request:
+            server.mpv.play(request['file'])
+        return {'status': 'ok'}
+
+
+class PlayPauseCommand(Command):
+    name = 'play-pause'
+
+    def run(self, server: 'Server', _request) -> Dict:
+        server.mpv.pause = not server.mpv.pause
+        return {'status': 'ok'}
+
+
+class PauseCommand(Command):
+    name = 'pause'
+
+    def run(self, server: 'Server', _request) -> Dict:
+        server.mpv.pause = True
+        return {'status': 'ok'}
+
+
+class StopCommand(Command):
+    name = 'stop'
+
+    def run(self, server: 'Server', _request) -> Dict:
+        server.mpv.pause = True
+        server.mpv.seek('00:00')
+        return {'status': 'ok'}
+
+
+class Server:
     def run(self, host, port, loop):
-        self._mpv = MPV(ytdl=True)
-        self._mpv.video = 'no'
-        self._mpv.pause = True
+        self.mpv = MPV(ytdl=True)
+        self.mpv.video = 'no'
+        self.mpv.pause = True
 
         server = loop.run_until_complete(
             asyncio.start_server(self.server_handler, host, port, loop=loop))
@@ -29,7 +68,7 @@ class Server:
         server.close()
         loop.run_until_complete(server.wait_closed())
         loop.close()
-        self._mpv.terminate()
+        self.mpv.terminate()
 
     async def server_handler(self, reader, writer):
         try:
@@ -38,7 +77,13 @@ class Server:
             logging.info('Received %r from %r', request, addr)
 
             try:
-                response = self._handlers[request['msg']](request)
+                cmd = next(
+                    cmd
+                    for cmd in Command.subclasses
+                    if cmd.name == request['msg'])
+                if not cmd:
+                    raise ValueError('Invalid operation')
+                response = cmd.run(self, request)
             except Exception as ex:
                 response = {
                     'status': 'error',
@@ -52,22 +97,6 @@ class Server:
             writer.close()
         except Exception as ex:
             logging.exception(ex)
-
-
-    def _handle_msg_play(self, msg):
-        self._mpv.pause = False
-        if 'file' in msg:
-            self._mpv.play(msg['file'])
-
-    def _handle_msg_play_pause(self, _msg):
-        self._mpv.pause = not self._mpv.pause
-
-    def _handle_msg_stop(self, _msg):
-        self._mpv.pause = True
-        self._mpv.seek('00:00')
-
-    def _handle_msg_pause(self, _msg):
-        self._mpv.pause = True
 
 
 def main():
