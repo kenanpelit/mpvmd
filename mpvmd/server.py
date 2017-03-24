@@ -71,32 +71,37 @@ class Server:
         self.mpv.terminate()
 
     async def server_handler(self, reader, writer):
-        try:
-            request = await transport.read(reader)
-            addr = writer.get_extra_info('peername')
-            logging.info('Received %r from %r', request, addr)
-
+        logging.info('Connected')
+        while True:
             try:
-                cmd = next(
-                    cmd
-                    for cmd in Command.subclasses
-                    if cmd.name == request['msg'])
-                if not cmd:
-                    raise ValueError('Invalid operation')
-                response = cmd.run(self, request)
+                request = await transport.read(reader)
+                if not request:
+                    break
+                addr = writer.get_extra_info('peername')
+                logging.info('Received %r from %r', request, addr)
+
+                try:
+                    cmd = next(
+                        cmd
+                        for cmd in Command.subclasses
+                        if cmd.name == request['msg'])
+                    if not cmd:
+                        raise ValueError('Invalid operation')
+                    response = cmd.run(self, request)
+                except Exception as ex:
+                    response = {
+                        'status': 'error',
+                        'code': ex.__class__.__name__,
+                        'msg': str(ex)
+                    }
+
+                logging.info('Send: %r', response)
+                await transport.write(writer, response)
             except Exception as ex:
-                response = {
-                    'status': 'error',
-                    'code': ex.__class__.__name__,
-                    'msg': str(ex)
-                }
+                logging.exception(ex)
 
-            logging.info('Send: %r', response)
-            await transport.write(writer, response)
-
-            writer.close()
-        except Exception as ex:
-            logging.exception(ex)
+        writer.close()
+        logging.info('Disconnected')
 
 
 def main():

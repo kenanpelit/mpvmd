@@ -1,10 +1,13 @@
 import json
 import struct
-from typing import Dict
+from typing import Optional, Dict
 
 
-async def read(reader):
-    data_size = struct.unpack('<I', await reader.read(4))[0]
+async def read(reader) -> Optional[Dict]:
+    data_size_raw = await reader.read(4)
+    if not data_size_raw:
+        return None
+    data_size = struct.unpack('<I', data_size_raw)[0]
     data = await reader.read(data_size)
     return json.loads(data.decode())
 
