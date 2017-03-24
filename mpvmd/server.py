@@ -26,12 +26,14 @@ class PlayCommand(Command):
         return {'status': 'ok'}
 
 
-class PlayPauseCommand(Command):
-    name = 'play-pause'
+class InfoCommand(Command):
+    name = 'info'
 
     def run(self, server: 'Server', _request) -> Dict:
-        server.mpv.pause = not server.mpv.pause
-        return {'status': 'ok'}
+        return {
+            'status': 'ok',
+            'paused': server.mpv.pause,
+        }
 
 
 class PauseCommand(Command):

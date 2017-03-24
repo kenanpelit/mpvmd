@@ -39,7 +39,12 @@ class PlayPauseCommand(Command):
     names = ['play-pause']
 
     async def run(self, args: argparse.Namespace, reader, writer) -> None:
-        await transport.write(writer, {'msg': 'play-pause'})
+        await transport.write(writer, {'msg': 'info'})
+        info = await transport.read(reader)
+        if info['paused']:
+            await transport.write(writer, {'msg': 'play'})
+        else:
+            await transport.write(writer, {'msg': 'pause'})
         print(await transport.read(reader))
 
 
