@@ -49,6 +49,8 @@ class InfoCommand(Command):
         return {
             'status': 'ok',
             'paused': state.mpv.pause,
+            'random': state.playlist.random,
+            'loop': state.playlist.loop,
         }
 
 
@@ -154,6 +156,22 @@ class PlaylistShuffleCommand(Command):
 
     def run(self, state: State, request) -> Dict:
         state.playlist.shuffle()
+        return {'status': 'ok'}
+
+
+class ToggleRandomCommand(Command):
+    name = 'random'
+
+    def run(self, state: State, request) -> Dict:
+        state.playlist.random = bool(request['random'])
+        return {'status': 'ok'}
+
+
+class ToggleLoopCommand(Command):
+    name = 'loop'
+
+    def run(self, state: State, request) -> Dict:
+        state.playlist.loop = bool(request['loop'])
         return {'status': 'ok'}
 
 

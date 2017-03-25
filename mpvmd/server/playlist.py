@@ -4,9 +4,12 @@ from typing import Optional, List
 
 class Playlist:
     def __init__(self) -> None:
+        self.random = False
+        self.loop = False
         self.items: List[str] = []
         self.current_index: Optional[int] = None
         self._deleted: Optional[str] = None
+        self._random_stack: List[int] = []
 
     @property
     def current_path(self) -> Optional[str]:
@@ -62,7 +65,12 @@ class Playlist:
         if not self.items:
             raise ValueError('Playlist is empty')
 
-        if self.current_index is None:
+        if self.random:
+            if delta < 0:
+                return self._random_stack.pop()
+            ret = random.randint(0, len(self.items) - 1)
+            self._random_stack.append(ret)
+        elif self.current_index is None:
             if delta < 0:
                 ret = len(self.items) - 1
             else:

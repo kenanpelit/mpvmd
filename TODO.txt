@@ -2,8 +2,6 @@
 - playlist control:
     - management:
         - print file
-        - random on/off
-        - repeat on/off
     - technical stuff:
         - integration with MPV (handle playback finish etc.)
         - handle non-existing files

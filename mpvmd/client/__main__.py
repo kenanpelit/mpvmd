@@ -137,6 +137,28 @@ class PlaylistShuffleCommand(Command):
         print(await transport.read(reader))
 
 
+class ToggleRandomCommand(Command):
+    names = ['toggle-random']
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        await transport.write(writer, {'msg': 'info'})
+        info = await transport.read(reader)
+        await transport.write(
+            writer, {'msg': 'random', 'random': not info['random']})
+        print(await transport.read(reader))
+
+
+class ToggleLoopCommand(Command):
+    names = ['toggle-loop']
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        await transport.write(writer, {'msg': 'info'})
+        info = await transport.read(reader)
+        await transport.write(
+            writer, {'msg': 'loop', 'loop': not info['loop']})
+        print(await transport.read(reader))
+
+
 def parse_args() -> Optional[argparse.Namespace]:
     parser = argparse.ArgumentParser(description='MPV music daemon client')
     subparsers = parser.add_subparsers(help='choose the command', dest='cmd')
