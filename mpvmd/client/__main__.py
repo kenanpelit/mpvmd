@@ -159,6 +159,25 @@ class ToggleLoopCommand(Command):
         print(await transport.read(reader))
 
 
+class SetVolumeCommand(Command):
+    names = ['vol', 'volume']
+
+    def decorate_arg_parser(self, parser: argparse.ArgumentParser) -> None:
+        def check_volume(value):
+            volume = float(value)
+            if volume < 0 or volume > 200.0:
+                raise argparse.ArgumentTypeError(
+                    'Volume must be within 0-200 range')
+            return volume
+
+        parser.add_argument('volume', type=check_volume)
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        volume: float = args.volume
+        await transport.write(writer, {'msg': 'volume', 'volume': volume})
+        print(await transport.read(reader))
+
+
 def parse_args() -> Optional[argparse.Namespace]:
     parser = argparse.ArgumentParser(description='MPV music daemon client')
     subparsers = parser.add_subparsers(help='choose the command', dest='cmd')

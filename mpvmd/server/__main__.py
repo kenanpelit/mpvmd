@@ -51,6 +51,7 @@ class InfoCommand(Command):
             'paused': state.mpv.pause,
             'random': state.playlist.random,
             'loop': state.playlist.loop,
+            'volume': state.playlist.volume,
         }
 
 
@@ -172,6 +173,14 @@ class ToggleLoopCommand(Command):
 
     def run(self, state: State, request) -> Dict:
         state.playlist.loop = bool(request['loop'])
+        return {'status': 'ok'}
+
+
+class SetVolumeCommand(Command):
+    name = 'volume'
+
+    def run(self, state: State, request) -> Dict:
+        state.mpv.volume = float(request['volume'])
         return {'status': 'ok'}
 
 

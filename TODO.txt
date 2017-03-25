@@ -6,5 +6,4 @@
         - integration with MPV (handle playback finish etc.)
         - handle non-existing files
 - seeking
-- volume control
 - resuming playback on server restart
