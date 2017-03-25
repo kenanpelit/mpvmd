@@ -96,6 +96,18 @@ class PlaylistNextCommand(Command):
         print(await transport.read(reader))
 
 
+class PlaylistJumpCommand(Command):
+    names = ['jump']
+
+    def decorate_arg_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument('index', type=int)
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        index: int = args.index
+        await transport.write(writer, {'msg': 'playlist-jump', 'index': index})
+        print(await transport.read(reader))
+
+
 def parse_args() -> Optional[argparse.Namespace]:
     parser = argparse.ArgumentParser(description='MPV music daemon client')
     subparsers = parser.add_subparsers(help='choose the command', dest='cmd')

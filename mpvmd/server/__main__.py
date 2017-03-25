@@ -123,6 +123,16 @@ class PlaylistNextCommand(Command):
         return {'status': 'ok'}
 
 
+class PlaylistJumpCommand(Command):
+    name = 'playlist-jump'
+
+    def run(self, state: State, request) -> Dict:
+        state.playlist.jump_to(int(request['index']))
+        state.mpv.play(state.playlist.current_path)
+        state.mpv.pause = False
+        return {'status': 'ok'}
+
+
 def _get_command(name: str) -> Command:
     try:
         return next(

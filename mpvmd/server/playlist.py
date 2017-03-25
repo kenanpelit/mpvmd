@@ -26,6 +26,11 @@ class Playlist:
     def jump_next(self) -> None:
         self.current_index = self._jump_relative(1)
 
+    def jump_to(self, index: int) -> None:
+        if index < 0 or index >= len(self.items):
+            raise IndexError('Playlist index out of bounds')
+        self.current_index = index
+
     def _jump_relative(self, delta: int) -> int:
         if not self.items:
             raise ValueError('Playlist is empty')
