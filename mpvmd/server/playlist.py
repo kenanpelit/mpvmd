@@ -19,6 +19,9 @@ class Playlist:
             return None
         return self.items[self.current_index]
 
+    def __len__(self) -> int:
+        return len(self.items)
+
     def add(self, path: str) -> None:
         self.items.append(path)
 

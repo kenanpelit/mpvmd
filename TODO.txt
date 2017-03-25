@@ -1,6 +1,2 @@
-- info about currently played file
-- playlist control:
-    - management:
-        - print file
 - seeking
 - resuming playback on server restart

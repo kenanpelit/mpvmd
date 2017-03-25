@@ -1,6 +1,12 @@
 import json
 import struct
-from typing import Optional, Dict
+from typing import Any, Optional, Dict
+
+
+def _serializer(obj: Any) -> Any:
+    if isinstance(obj, bytes):
+        return obj.decode()
+    raise TypeError('Type not serializable')
 
 
 async def read(reader) -> Optional[Dict]:
@@ -13,7 +19,7 @@ async def read(reader) -> Optional[Dict]:
 
 
 async def write(writer, message: Dict):
-    data = json.dumps(message).encode()
+    data = json.dumps(message, default=_serializer).encode()
     writer.write(struct.pack('<I', len(data)))
     writer.write(data)
     await writer.drain()

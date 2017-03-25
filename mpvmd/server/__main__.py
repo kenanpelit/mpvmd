@@ -54,10 +54,17 @@ class InfoCommand(Command):
     def run(self, state: State, _request) -> Dict:
         return {
             'status': 'ok',
+            'playlist-pos': state.playlist.current_index,
+            'playlist-size': len(state.playlist),
             'paused': state.mpv.pause,
             'random': state.playlist.random,
             'loop': state.playlist.loop,
-            'volume': state.playlist.volume,
+            'volume': state.mpv.volume,
+            'path': state.mpv.path,
+            'metadata': (
+                state.mpv.metadata
+                if state.mpv.playlist_count > 0
+                else None) or {},
         }
 
 
@@ -73,6 +80,10 @@ class StopCommand(Command):
     name = 'stop'
 
     def run(self, state: State, _request) -> Dict:
+        try:
+            state.mpv.playlist_remove()
+        except SystemError:
+            pass
         state.mpv.pause = True
         try:
             state.mpv.seek('00:00')
