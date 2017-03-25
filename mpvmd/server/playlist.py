@@ -1,3 +1,4 @@
+import random
 from typing import Optional, List
 
 
@@ -52,6 +53,10 @@ class Playlist:
             raise IndexError('Playlist index out of bounds')
         self.current_index = index
         self._deleted = None
+
+    def shuffle(self) -> None:
+        random.shuffle(self.items)
+        self.current_index = None
 
     def _jump_relative(self, delta: int) -> int:
         if not self.items:

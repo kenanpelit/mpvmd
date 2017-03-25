@@ -4,7 +4,6 @@
         - print file
         - random on/off
         - repeat on/off
-        - shuffle the playlist
     - technical stuff:
         - integration with MPV (handle playback finish etc.)
         - handle non-existing files

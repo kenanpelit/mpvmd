@@ -129,6 +129,14 @@ class PlaylistJumpCommand(Command):
         print(await transport.read(reader))
 
 
+class PlaylistShuffleCommand(Command):
+    names = ['shuffle']
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        await transport.write(writer, {'msg': 'playlist-shuffle'})
+        print(await transport.read(reader))
+
+
 def parse_args() -> Optional[argparse.Namespace]:
     parser = argparse.ArgumentParser(description='MPV music daemon client')
     subparsers = parser.add_subparsers(help='choose the command', dest='cmd')

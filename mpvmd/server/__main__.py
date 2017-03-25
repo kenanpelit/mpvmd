@@ -149,6 +149,14 @@ class PlaylistJumpCommand(Command):
         return {'status': 'ok'}
 
 
+class PlaylistShuffleCommand(Command):
+    name = 'shuffle'
+
+    def run(self, state: State, request) -> Dict:
+        state.playlist.shuffle()
+        return {'status': 'ok'}
+
+
 def _get_command(name: str) -> Command:
     try:
         return next(
