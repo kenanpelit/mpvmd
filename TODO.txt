@@ -2,8 +2,5 @@
 - playlist control:
     - management:
         - print file
-    - technical stuff:
-        - integration with MPV (handle playback finish etc.)
-        - handle non-existing files
 - seeking
 - resuming playback on server restart

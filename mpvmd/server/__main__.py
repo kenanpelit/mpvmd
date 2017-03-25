@@ -2,9 +2,15 @@ import os
 import logging
 import asyncio
 from typing import Dict, List
-from mpv import MPV
+from mpv import MPV, MpvEventID
 from mpvmd import transport, settings
 from mpvmd.server.playlist import Playlist
+
+
+MPV_END_FILE_REASON_EOF = 0
+MPV_END_FILE_REASON_STOP = 2
+MPV_END_FILE_REASON_QUIT = 3
+MPV_END_FILE_REASON_ERROR = 4
 
 
 class State:
@@ -201,8 +207,19 @@ def _get_command(name: str) -> Command:
         raise ValueError('Invalid operation')
 
 
+def _event_cb(state: State, event: Dict):
+    if (event['event_id'] == MpvEventID.END_FILE
+            and event['event']['reason'] in (
+                MPV_END_FILE_REASON_EOF, MPV_END_FILE_REASON_ERROR)):
+        state.playlist.jump_next()
+        logging.info('Playing next file (%s)...', state.playlist.current_path)
+        state.mpv.loadfile(state.playlist.current_path)
+        state.mpv.pause = False
+
+
 def run(host, port, loop):
     state = State()
+    state.mpv.register_event_callback(lambda event: _event_cb(state, event))
 
     async def server_handler(reader, writer):
         logging.info('Connected')
