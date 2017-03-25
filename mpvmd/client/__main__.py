@@ -1,7 +1,8 @@
+import os
 import argparse
 import asyncio
 from typing import Optional, Dict, List
-from mpvmd import transport, settings
+from mpvmd import transport, settings, formatter
 
 
 class ApiError(RuntimeError):
@@ -16,13 +17,17 @@ def assert_status(response: Dict) -> None:
         raise ApiError(response['code'], response['msg'])
 
 
+def normalize_metadata(metadata: Dict) -> Dict:
+    return {
+        key.lower(): value
+        for key, value in (metadata or {}).items()
+    }
+
+
 async def show_info(reader, writer) -> None:
     await transport.write(writer, {'msg': 'info'})
     info = await transport.read(reader)
-    metadata = {
-        key.lower(): value
-        for key, value in (info['metadata'] or {}).items()
-    }
+    metadata = normalize_metadata(info['metadata'])
 
     print('({}/{}) {}'.format(
         '-' if info['playlist-pos'] is None else info['playlist-pos'],
@@ -70,6 +75,7 @@ class PlayCommand(Command):
             request['file'] = args.file
         await transport.write(writer, request)
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class PlayPauseCommand(Command):
@@ -83,6 +89,7 @@ class PlayPauseCommand(Command):
         else:
             await transport.write(writer, {'msg': 'pause'})
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class PauseCommand(Command):
@@ -91,6 +98,7 @@ class PauseCommand(Command):
     async def run(self, args: argparse.Namespace, reader, writer) -> None:
         await transport.write(writer, {'msg': 'pause'})
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class StopCommand(Command):
@@ -99,6 +107,7 @@ class StopCommand(Command):
     async def run(self, args: argparse.Namespace, reader, writer) -> None:
         await transport.write(writer, {'msg': 'stop'})
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class PlaylistAddCommand(Command):
@@ -116,6 +125,7 @@ class PlaylistAddCommand(Command):
             request['index'] = index
         await transport.write(writer, request)
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class PlaylistDeleteCommand(Command):
@@ -129,6 +139,7 @@ class PlaylistDeleteCommand(Command):
         await transport.write(
             writer, {'msg': 'playlist-remove', 'index': index})
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class PlaylistClearCommand(Command):
@@ -137,6 +148,7 @@ class PlaylistClearCommand(Command):
     async def run(self, args: argparse.Namespace, reader, writer) -> None:
         await transport.write(writer, {'msg': 'playlist-clear'})
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class PlaylistPrevCommand(Command):
@@ -145,6 +157,7 @@ class PlaylistPrevCommand(Command):
     async def run(self, args: argparse.Namespace, reader, writer) -> None:
         await transport.write(writer, {'msg': 'playlist-prev'})
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class PlaylistNextCommand(Command):
@@ -153,6 +166,7 @@ class PlaylistNextCommand(Command):
     async def run(self, args: argparse.Namespace, reader, writer) -> None:
         await transport.write(writer, {'msg': 'playlist-next'})
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class PlaylistJumpCommand(Command):
@@ -165,6 +179,7 @@ class PlaylistJumpCommand(Command):
         index: int = args.index
         await transport.write(writer, {'msg': 'playlist-jump', 'index': index})
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class PlaylistShuffleCommand(Command):
@@ -173,6 +188,7 @@ class PlaylistShuffleCommand(Command):
     async def run(self, args: argparse.Namespace, reader, writer) -> None:
         await transport.write(writer, {'msg': 'playlist-shuffle'})
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class ToggleRandomCommand(Command):
@@ -184,6 +200,7 @@ class ToggleRandomCommand(Command):
         await transport.write(
             writer, {'msg': 'random', 'random': not info['random']})
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class ToggleLoopCommand(Command):
@@ -195,6 +212,7 @@ class ToggleLoopCommand(Command):
         await transport.write(
             writer, {'msg': 'loop', 'loop': not info['loop']})
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
 
 
 class SetVolumeCommand(Command):
@@ -214,6 +232,44 @@ class SetVolumeCommand(Command):
         volume: float = args.volume
         await transport.write(writer, {'msg': 'volume', 'volume': volume})
         assert_status(await transport.read(reader))
+        await show_info(reader, writer)
+
+
+class PrintCommand(Command):
+    names = ['print']
+
+    def decorate_arg_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            '-f', '--format',
+            default=
+            '[[[[%artist%|%albumartist%] - ]%title%|%name%]|nothing played]')
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        format_str: str = args.format
+        await transport.write(writer, {'msg': 'info'})
+        info = await transport.read(reader)
+        metadata = normalize_metadata(info['metadata'])
+
+        templates = {
+            'title': metadata.get('title'),
+            'date': metadata.get('date'),
+            'artist': metadata.get('artist'),
+            'album': metadata.get('album'),
+            'albumartist': metadata.get('albumartist'),
+            'composer': metadata.get('composer'),
+            'performer': metadata.get('performer'),
+            'genre': metadata.get('genre'),
+            'disc': metadata.get('disc'),
+            'disctotal': metadata.get('disctotal'),
+            'track': metadata.get('track'),
+            'tracktotal': metadata.get('tracktotal'),
+            'comment': metadata.get('comment'),
+            # 'time': info['time'],
+            'file': info['path'],
+            'name': os.path.basename(info['path']) if info['path'] else None,
+        }
+
+        print(formatter.format_templates(format_str, templates))
 
 
 def parse_args() -> Optional[argparse.Namespace]:
@@ -238,7 +294,8 @@ async def run(loop):
     reader, writer = await asyncio.open_connection(host, port, loop=loop)
     if args.run:
         await args.run(args, reader, writer)
-    await show_info(reader, writer)
+    else:
+        await show_info(reader, writer)
     writer.close()
 
 
