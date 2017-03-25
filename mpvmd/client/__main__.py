@@ -19,13 +19,18 @@ def assert_status(response: Dict) -> None:
 async def show_info(reader, writer) -> None:
     await transport.write(writer, {'msg': 'info'})
     info = await transport.read(reader)
+    metadata = {
+        key.lower(): value
+        for key, value in (info['metadata'] or {}).items()
+    }
+
     print('({}/{}) {}'.format(
         '-' if info['playlist-pos'] is None else info['playlist-pos'],
         info['playlist-size'] or '-',
         info['path'] or '-'))
-    print('Artist: {}'.format(info['metadata'].get('artist') or '?'))
-    print('Date:   {}'.format(info['metadata'].get('date') or '?'))
-    print('Title:  {}'.format(info['metadata'].get('title') or '?'))
+    print('Artist: {}'.format(metadata.get('artist') or '?'))
+    print('Date:   {}'.format(metadata.get('date') or '?'))
+    print('Title:  {}'.format(metadata.get('title') or '?'))
     print()
     print('Pause:  {}'.format(info['paused']))
     print('Loop:   {}'.format(info['loop']))
