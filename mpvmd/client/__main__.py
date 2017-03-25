@@ -210,6 +210,8 @@ class SetVolumeCommand(Command):
 
 def parse_args() -> Optional[argparse.Namespace]:
     parser = argparse.ArgumentParser(description='MPV music daemon client')
+    parser.add_argument('--host', default=settings.HOST)
+    parser.add_argument('-p', '--port', type=int, default=settings.PORT)
     subparsers = parser.add_subparsers(help='choose the command', dest='cmd')
     for command in Command.subclasses:
         subparser = subparsers.add_parser(
@@ -228,8 +230,9 @@ async def run(loop):
     args = parse_args()
     if not args:
         sys.exit(1)
-    reader, writer = await asyncio.open_connection(
-        settings.HOST, settings.PORT, loop=loop)
+    host: str = args.host
+    port: int = args.port
+    reader, writer = await asyncio.open_connection(host, port, loop=loop)
     await args.run(args, reader, writer)
     await show_info(reader, writer)
     writer.close()

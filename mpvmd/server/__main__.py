@@ -1,6 +1,7 @@
 import os
-import logging
+import argparse
 import asyncio
+import logging
 from typing import Dict, List
 from mpv import MPV, MpvEventID
 from mpvmd import transport, settings
@@ -304,10 +305,21 @@ def run(host, port, loop):
     state.mpv.terminate()
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description='MPV music daemon client')
+    parser.add_argument('--host', default=settings.HOST)
+    parser.add_argument('-p', '--port', type=int, default=settings.PORT)
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    host: str = args.host
+    port: int = args.port
+
     logging.basicConfig(level=logging.INFO)
     loop = asyncio.get_event_loop()
-    run(settings.HOST, settings.PORT, loop)
+    run(host, port, loop)
 
 
 if __name__ == '__main__':
