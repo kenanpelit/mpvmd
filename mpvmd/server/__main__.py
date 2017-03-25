@@ -74,7 +74,10 @@ class StopCommand(Command):
 
     def run(self, state: State, _request) -> Dict:
         state.mpv.pause = True
-        state.mpv.seek('00:00')
+        try:
+            state.mpv.seek('00:00')
+        except SystemError:
+            pass
         return {'status': 'ok'}
 
 
