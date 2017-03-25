@@ -6,8 +6,11 @@ from mpvmd import transport, settings
 
 
 class Command:
-    name: str
     subclasses: List['Command'] = []
+
+    @property
+    def name(self) -> str:
+        raise NotImplementedError()
 
     def __init_subclass__(cls, **kwargs):
         Command.subclasses.append(cls())
