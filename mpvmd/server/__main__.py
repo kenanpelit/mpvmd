@@ -74,7 +74,11 @@ class PlaylistAddCommand(Command):
 
     def run(self, state: State, request) -> Dict:
         file = str(request['file'])
-        state.playlist.add(file)
+        index = int(request['index']) if 'index' in request else None
+        if index is not None:
+            state.playlist.insert(file, index)
+        else:
+            state.playlist.add(file)
         return {'status': 'ok'}
 
 
