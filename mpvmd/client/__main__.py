@@ -302,7 +302,10 @@ async def run(loop):
     port: int = args.port
     reader, writer = await asyncio.open_connection(host, port, loop=loop)
     if args.run:
-        await args.run(args, reader, writer)
+        try:
+            await args.run(args, reader, writer)
+        except ApiError as error:
+            print(error.text)
     else:
         await show_info(reader, writer)
     writer.close()
