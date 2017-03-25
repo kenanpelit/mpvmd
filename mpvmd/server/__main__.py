@@ -40,10 +40,15 @@ class PlayCommand(Command):
 
     def run(self, state: State, request) -> Dict:
         if 'file' in request:
-            state.mpv.play(str(request['file']))
+            file = str(request['file'])
+            state.mpv.play(file)
+            logging.info('Playing %r', file)
         elif state.playlist.current_path is None:
             state.playlist.jump_next()
             state.mpv.play(state.playlist.current_path)
+            logging.info('Starting playback: %r', state.playlist.current_path)
+        else:
+            logging.info('Unpausing playback')
         state.mpv.pause = False
         return {'status': 'ok'}
 
@@ -73,6 +78,7 @@ class PauseCommand(Command):
 
     def run(self, state: State, _request) -> Dict:
         state.mpv.pause = True
+        logging.info('Pausing playback')
         return {'status': 'ok'}
 
 
@@ -89,6 +95,7 @@ class StopCommand(Command):
             state.mpv.seek('00:00')
         except SystemError:
             pass
+        logging.info('Stopping playback')
         return {'status': 'ok'}
 
 
@@ -109,7 +116,7 @@ class PlaylistAddCommand(Command):
 
         def scan(dir):
             nonlocal added
-            logging.info('Traversing %s', dir)
+            logging.debug('Traversing %s', dir)
             for entry in os.scandir(dir):
                 if entry.is_dir(follow_symlinks=False):
                     scan(entry.path)
@@ -130,6 +137,7 @@ class PlaylistAddCommand(Command):
                     state.playlist.add(file)
                 added += 1
 
+        logging.info('Adding %r items to the playlist', added)
         return {'status': 'ok', 'added': added}
 
 
@@ -137,7 +145,9 @@ class PlaylistRemoveCommand(Command):
     name = 'playlist-remove'
 
     def run(self, state: State, request) -> Dict:
-        state.playlist.delete(int(request['index']))
+        index = int(request['index'])
+        state.playlist.delete(index)
+        logging.info('Removing %r', index)
         return {'status': 'ok'}
 
 
@@ -146,6 +156,7 @@ class PlaylistClearCommand(Command):
 
     def run(self, state: State, _request) -> Dict:
         state.playlist.clear()
+        logging.info('Clearing the playlist')
         return {'status': 'ok'}
 
 
@@ -156,6 +167,10 @@ class PlaylistPrevCommand(Command):
         state.playlist.jump_prev()
         state.mpv.play(state.playlist.current_path)
         state.mpv.pause = False
+        logging.info(
+            'Jumping to %r: %r',
+            state.playlist.current_index,
+            state.playlist.current_path)
         return {'status': 'ok'}
 
 
@@ -166,6 +181,10 @@ class PlaylistNextCommand(Command):
         state.playlist.jump_next()
         state.mpv.play(state.playlist.current_path)
         state.mpv.pause = False
+        logging.info(
+            'Jumping to %r: %r',
+            state.playlist.current_index,
+            state.playlist.current_path)
         return {'status': 'ok'}
 
 
@@ -176,6 +195,10 @@ class PlaylistJumpCommand(Command):
         state.playlist.jump_to(int(request['index']))
         state.mpv.play(state.playlist.current_path)
         state.mpv.pause = False
+        logging.info(
+            'Jumping to %r: %r',
+            state.playlist.current_index,
+            state.playlist.current_path)
         return {'status': 'ok'}
 
 
@@ -184,6 +207,7 @@ class PlaylistShuffleCommand(Command):
 
     def run(self, state: State, request) -> Dict:
         state.playlist.shuffle()
+        logging.info('Shuffling the playlist')
         return {'status': 'ok'}
 
 
@@ -192,6 +216,7 @@ class ToggleRandomCommand(Command):
 
     def run(self, state: State, request) -> Dict:
         state.playlist.random = bool(request['random'])
+        logging.info('Setting random flag to %r', state.playlist.random)
         return {'status': 'ok'}
 
 
@@ -200,6 +225,7 @@ class ToggleLoopCommand(Command):
 
     def run(self, state: State, request) -> Dict:
         state.playlist.loop = bool(request['loop'])
+        logging.info('Setting loop flag to %r', state.playlist.loop)
         return {'status': 'ok'}
 
 
@@ -208,6 +234,7 @@ class SetVolumeCommand(Command):
 
     def run(self, state: State, request) -> Dict:
         state.mpv.volume = float(request['volume'])
+        logging.info('Setting volume to %r', state.mpv.volume)
         return {'status': 'ok'}
 
 
@@ -236,14 +263,14 @@ def run(host, port, loop):
     state.mpv.register_event_callback(lambda event: _event_cb(state, event))
 
     async def server_handler(reader, writer):
-        logging.info('Connected')
+        addr = writer.get_extra_info('peername')
+        logging.debug('%r: connected', addr)
         while True:
             try:
                 request = await transport.read(reader)
                 if not request:
                     break
-                addr = writer.get_extra_info('peername')
-                logging.info('Received %r from %r', request, addr)
+                logging.debug('%r: receive %r', addr, request)
 
                 try:
                     cmd = _get_command(request['msg'])
@@ -255,13 +282,13 @@ def run(host, port, loop):
                         'msg': str(ex)
                     }
 
-                logging.info('Send: %r', response)
+                logging.debug('%r: send %r', addr, response)
                 await transport.write(writer, response)
             except Exception as ex:
                 logging.exception(ex)
 
         writer.close()
-        logging.info('Disconnected')
+        logging.debug('%r: disconnected', addr)
 
     server = loop.run_until_complete(
         asyncio.start_server(server_handler, host, port, loop=loop))
