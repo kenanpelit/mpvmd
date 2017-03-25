@@ -80,6 +80,14 @@ class PlaylistAddCommand(Command):
         print(await transport.read(reader))
 
 
+class PlaylistClearCommand(Command):
+    names = ['clear']
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        await transport.write(writer, {'msg': 'playlist-clear'})
+        print(await transport.read(reader))
+
+
 class PlaylistPrevCommand(Command):
     names = ['prev']
 

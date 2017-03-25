@@ -20,6 +20,10 @@ class Playlist:
             raise IndexError('Playlist index out of bounds')
         self.items.insert(index, path)
 
+    def clear(self) -> None:
+        self.items = []
+        self.current_index = None
+
     def jump_prev(self) -> None:
         self.current_index = self._jump_relative(-1)
 

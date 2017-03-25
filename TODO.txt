@@ -1,9 +1,7 @@
 - info about currently played file
 - playlist control:
     - management:
-        - clear
         - delete file at index
-        - delete all except currently playing
         - print file
         - random on/off
         - repeat on/off
