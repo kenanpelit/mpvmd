@@ -30,6 +30,10 @@ async def show_info(reader, writer) -> None:
         info['path'] or '-'))
     print('Artist: {}'.format(metadata.get('artist') or '?'))
     print('Date:   {}'.format(metadata.get('date') or '?'))
+    print('Album:  {}'.format(metadata.get('album') or '?'))
+    print('Track:  {}/{}'.format(
+        metadata.get('track') or '?',
+        metadata.get('tracktotal') or '?'))
     print('Title:  {}'.format(metadata.get('title') or '?'))
     print()
     print('Pause:  {}'.format(info['paused']))
