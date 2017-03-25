@@ -67,6 +67,8 @@ class InfoCommand(Command):
             'loop': state.playlist.loop,
             'volume': state.mpv.volume,
             'path': state.mpv.path,
+            'time-pos': state.mpv.time_pos,
+            'duration': state.mpv.duration,
             'metadata': (
                 state.mpv.metadata
                 if state.mpv.playlist_count > 0

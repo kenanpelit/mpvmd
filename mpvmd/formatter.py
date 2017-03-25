@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Optional, Dict
 import parsimonious
 
 
@@ -76,3 +76,16 @@ def format_templates(format_str: str, templates: Dict[str, str]) -> str:
             parsimonious.exceptions.ParseError,
             parsimonious.exceptions.IncompleteParseError):
         raise FormatError('Bad format string')
+
+
+def format_duration(seconds: Optional[float]) -> Optional[str]:
+    if seconds is None:
+        return None
+    seconds = int(seconds)
+    hours = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    if hours:
+        return '{:02}:{:02}:{:02}'.format(hours, minutes, seconds)
+    return '{:02}:{:02}'.format(minutes, seconds)

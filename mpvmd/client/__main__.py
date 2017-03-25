@@ -29,22 +29,29 @@ async def show_info(reader, writer) -> None:
     info = await transport.read(reader)
     metadata = normalize_metadata(info['metadata'])
 
-    print('({}/{}) {}'.format(
+    print('({}/{})   {}'.format(
         '-' if info['playlist-pos'] is None else info['playlist-pos'],
         info['playlist-size'] or '-',
         info['path'] or '-'))
-    print('Artist: {}'.format(metadata.get('artist') or '?'))
-    print('Date:   {}'.format(metadata.get('date') or '?'))
-    print('Album:  {}'.format(metadata.get('album') or '?'))
-    print('Track:  {}/{}'.format(
-        metadata.get('track') or '?',
-        metadata.get('tracktotal') or '?'))
-    print('Title:  {}'.format(metadata.get('title') or '?'))
+    print('Artist:   {}'.format(metadata.get('artist') or '?'))
+    print('Date:     {}'.format(metadata.get('date') or '?'))
+    print('Album:    {}'.format(metadata.get('album') or '?'))
+    if '/' in metadata.get('track', ''):
+        print('Track:    {}'.format(metadata.get('track') or '?'))
+    else:
+        print('Track:    {}/{}'.format(
+            metadata.get('track') or '?',
+            metadata.get('tracktotal') or '?'))
+    print('Title:    {}'.format(metadata.get('title') or '?'))
     print()
-    print('Pause:  {}'.format(info['paused']))
-    print('Loop:   {}'.format(info['loop']))
-    print('Random: {}'.format(info['random']))
-    print('Volume: {}'.format(info['volume']))
+    print('Playback: {}'.format(
+        formatter.format_duration(info['time-pos']) or '-'))
+    print('Duration: {}'.format(
+        formatter.format_duration(info['duration']) or '-'))
+    print('Pause:    {}'.format(info['paused']))
+    print('Loop:     {}'.format(info['loop']))
+    print('Random:   {}'.format(info['random']))
+    print('Volume:   {}'.format(info['volume']))
     print()
 
 
@@ -242,7 +249,8 @@ class PrintCommand(Command):
         parser.add_argument(
             '-f', '--format',
             default=
-            '[[[[%artist%|%albumartist%] - ]%title%|%name%]|nothing played]')
+            '[[[[[%artist%|%albumartist%] - ]%title%|%name%]' +
+            '[ (%time%[/%duration%])]]|nothing played]')
 
     async def run(self, args: argparse.Namespace, reader, writer) -> None:
         format_str: str = args.format
@@ -264,7 +272,8 @@ class PrintCommand(Command):
             'track': metadata.get('track'),
             'tracktotal': metadata.get('tracktotal'),
             'comment': metadata.get('comment'),
-            # 'time': info['time'],
+            'time': formatter.format_duration(info['time-pos']),
+            'duration': formatter.format_duration(info['duration']),
             'file': info['path'],
             'name': os.path.basename(info['path']) if info['path'] else None,
         }
