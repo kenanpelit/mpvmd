@@ -75,11 +75,32 @@ class PlaylistAddCommand(Command):
     def run(self, state: State, request) -> Dict:
         file = str(request['file'])
         index = int(request['index']) if 'index' in request else None
-        if index is not None:
-            state.playlist.insert(file, index)
+
+        if os.path.isdir(file):
+            added = 0
+
+            def scan(dir):
+                nonlocal added
+                logging.info('Traversing %s', dir)
+                for entry in os.scandir(dir):
+                    if entry.is_dir(follow_symlinks=False):
+                        scan(entry.path)
+                    elif entry.name.lower().endswith(settings.EXTENSIONS):
+                        if index is not None:
+                            state.playlist.insert(entry.path, index + added)
+                        else:
+                            state.playlist.add(entry.path)
+                        added += 1
+
+            scan(file)
         else:
-            state.playlist.add(file)
-        return {'status': 'ok'}
+            if index is not None:
+                state.playlist.insert(file, index)
+            else:
+                state.playlist.add(file)
+            added = 1
+
+        return {'status': 'ok', 'added': added}
 
 
 class PlaylistPrevCommand(Command):

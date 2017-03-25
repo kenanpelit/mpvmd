@@ -1,7 +1,6 @@
 - info about currently played file
 - playlist control:
     - management:
-        - add directory
         - clear
         - delete file at index
         - delete all except currently playing
