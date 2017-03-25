@@ -27,7 +27,6 @@ class PlayCommand(Command):
 
     async def run(self, args: argparse.Namespace, reader, writer) -> None:
         file: Optional[str] = args.file
-        print(file)
         request = {'msg': 'play'}
         if file:
             request['file'] = args.file
@@ -61,6 +60,34 @@ class StopCommand(Command):
 
     async def run(self, args: argparse.Namespace, reader, writer) -> None:
         await transport.write(writer, {'msg': 'stop'})
+        print(await transport.read(reader))
+
+
+class PlaylistAddCommand(Command):
+    names = ['add']
+
+    def decorate_arg_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument('file')
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        file: str = args.file
+        await transport.write(writer, {'msg': 'playlist-add', 'file': file})
+        print(await transport.read(reader))
+
+
+class PlaylistPrevCommand(Command):
+    names = ['prev']
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        await transport.write(writer, {'msg': 'playlist-prev'})
+        print(await transport.read(reader))
+
+
+class PlaylistNextCommand(Command):
+    names = ['next']
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        await transport.write(writer, {'msg': 'playlist-next'})
         print(await transport.read(reader))
 
 

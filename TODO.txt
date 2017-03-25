@@ -1,7 +1,6 @@
 - info about currently played file
 - playlist control:
     - management:
-        - add file or URL
         - add directory
         - clear
         - delete file at index
@@ -10,8 +9,6 @@
         - random on/off
         - repeat on/off
         - shuffle the playlist
-        - previous file
-        - next file
     - technical stuff:
         - integration with MPV (handle playback finish etc.)
         - handle non-existing files

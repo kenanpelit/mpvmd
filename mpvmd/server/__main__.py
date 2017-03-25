@@ -34,7 +34,10 @@ class PlayCommand(Command):
 
     def run(self, state: State, request) -> Dict:
         if 'file' in request:
-            state.mpv.play(request['file'])
+            state.mpv.play(str(request['file']))
+        elif state.playlist.current_path is None:
+            state.playlist.jump_next()
+            state.mpv.play(state.playlist.current_path)
         state.mpv.pause = False
         return {'status': 'ok'}
 
@@ -63,6 +66,35 @@ class StopCommand(Command):
     def run(self, state: State, _request) -> Dict:
         state.mpv.pause = True
         state.mpv.seek('00:00')
+        return {'status': 'ok'}
+
+
+class PlaylistAddCommand(Command):
+    name = 'playlist-add'
+
+    def run(self, state: State, request) -> Dict:
+        file = str(request['file'])
+        state.playlist.add(file)
+        return {'status': 'ok'}
+
+
+class PlaylistPrevCommand(Command):
+    name = 'playlist-prev'
+
+    def run(self, state: State, _request) -> Dict:
+        state.playlist.jump_prev()
+        state.mpv.play(state.playlist.current_path)
+        state.mpv.pause = False
+        return {'status': 'ok'}
+
+
+class PlaylistNextCommand(Command):
+    name = 'playlist-next'
+
+    def run(self, state: State, _request) -> Dict:
+        state.playlist.jump_next()
+        state.mpv.play(state.playlist.current_path)
+        state.mpv.pause = False
         return {'status': 'ok'}
 
 
