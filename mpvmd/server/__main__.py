@@ -22,6 +22,18 @@ class State:
         self.playlist = Playlist()
 
 
+def _stop_playback(state: State):
+    try:
+        state.mpv.playlist_remove()
+    except SystemError:
+        pass
+    state.mpv.pause = True
+    try:
+        state.mpv.seek('00:00')
+    except SystemError:
+        pass
+
+
 class Command:
     subclasses: List['Command'] = []
 
@@ -89,15 +101,7 @@ class StopCommand(Command):
     name = 'stop'
 
     def run(self, state: State, _request) -> Dict:
-        try:
-            state.mpv.playlist_remove()
-        except SystemError:
-            pass
-        state.mpv.pause = True
-        try:
-            state.mpv.seek('00:00')
-        except SystemError:
-            pass
+        _stop_playback(state)
         logging.info('Stopping playback')
         return {'status': 'ok'}
 
@@ -255,7 +259,12 @@ def _event_cb(state: State, event: Dict):
     if (event['event_id'] == MpvEventID.END_FILE
             and event['event']['reason'] in (
                 MPV_END_FILE_REASON_EOF, MPV_END_FILE_REASON_ERROR)):
-        state.playlist.jump_next()
+        try:
+            state.playlist.jump_next()
+        except ValueError:
+            _stop_playback(state)
+            logging.info('No more files to play')
+            return
         logging.info('Playing next file (%s)...', state.playlist.current_path)
         state.mpv.loadfile(state.playlist.current_path)
         state.mpv.pause = False
