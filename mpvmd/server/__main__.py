@@ -76,32 +76,39 @@ class PlaylistAddCommand(Command):
     name = 'playlist-add'
 
     def run(self, state: State, request) -> Dict:
-        file = str(request['file'])
         index = int(request['index']) if 'index' in request else None
+        files = (
+            [str(request['file'])]
+            if 'file' in request
+            else [
+                str(file)
+                for file in list(request['files'])
+            ])
 
-        if os.path.isdir(file):
-            added = 0
+        added = 0
 
-            def scan(dir):
-                nonlocal added
-                logging.info('Traversing %s', dir)
-                for entry in os.scandir(dir):
-                    if entry.is_dir(follow_symlinks=False):
-                        scan(entry.path)
-                    elif entry.name.lower().endswith(settings.EXTENSIONS):
-                        if index is not None:
-                            state.playlist.insert(entry.path, index + added)
-                        else:
-                            state.playlist.add(entry.path)
-                        added += 1
+        def scan(dir):
+            nonlocal added
+            logging.info('Traversing %s', dir)
+            for entry in os.scandir(dir):
+                if entry.is_dir(follow_symlinks=False):
+                    scan(entry.path)
+                elif entry.name.lower().endswith(settings.EXTENSIONS):
+                    if index is not None:
+                        state.playlist.insert(entry.path, index + added)
+                    else:
+                        state.playlist.add(entry.path)
+                    added += 1
 
-            scan(file)
-        else:
-            if index is not None:
-                state.playlist.insert(file, index)
+        for file in files:
+            if os.path.isdir(file):
+                scan(file)
             else:
-                state.playlist.add(file)
-            added = 1
+                if index is not None:
+                    state.playlist.insert(file, index)
+                else:
+                    state.playlist.add(file)
+                added += 1
 
         return {'status': 'ok', 'added': added}
 

@@ -67,13 +67,13 @@ class PlaylistAddCommand(Command):
     names = ['add']
 
     def decorate_arg_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument('file')
+        parser.add_argument('file', nargs='+')
         parser.add_argument('-i', '--index', type=int)
 
     async def run(self, args: argparse.Namespace, reader, writer) -> None:
-        file: str = args.file
+        files: List[str] = args.file
         index: Optional[int] = args.index
-        request = {'msg': 'playlist-add', 'file': file}
+        request = {'msg': 'playlist-add', 'files': files}
         if index is not None:
             request['index'] = index
         await transport.write(writer, request)
