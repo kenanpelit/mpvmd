@@ -103,6 +103,14 @@ class PlaylistAddCommand(Command):
         return {'status': 'ok', 'added': added}
 
 
+class PlaylistRemoveCommand(Command):
+    name = 'playlist-remove'
+
+    def run(self, state: State, request) -> Dict:
+        state.playlist.delete(int(request['index']))
+        return {'status': 'ok'}
+
+
 class PlaylistClearCommand(Command):
     name = 'playlist-clear'
 

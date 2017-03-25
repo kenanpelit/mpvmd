@@ -80,6 +80,19 @@ class PlaylistAddCommand(Command):
         print(await transport.read(reader))
 
 
+class PlaylistDeleteCommand(Command):
+    names = ['del', 'delete']
+
+    def decorate_arg_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument('index', type=int)
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        index: int = args.index
+        await transport.write(
+            writer, {'msg': 'playlist-remove', 'index': index})
+        print(await transport.read(reader))
+
+
 class PlaylistClearCommand(Command):
     names = ['clear']
 
