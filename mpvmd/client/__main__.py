@@ -118,6 +118,18 @@ class StopCommand(Command):
         await show_info(reader, writer)
 
 
+class PlaylistInfoCommand(Command):
+    names = ['list']
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        request = {'msg': 'playlist-info'}
+        await transport.write(writer, request)
+        info = await transport.read(reader)
+        assert_status(info)
+        for i, path in enumerate(info['paths']):
+            print('#{}: {}'.format(i, path))
+
+
 class PlaylistAddCommand(Command):
     names = ['add']
 

@@ -127,6 +127,16 @@ class StopCommand(Command):
         return {'status': 'ok'}
 
 
+class PlaylistInfoCommand(Command):
+    name = 'playlist-info'
+
+    def run(self, state: State, _request) -> Dict:
+        return {
+            'status': 'ok',
+            'paths': state.playlist.items,
+        }
+
+
 class PlaylistAddCommand(Command):
     name = 'playlist-add'
 

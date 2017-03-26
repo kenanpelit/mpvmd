@@ -26,6 +26,7 @@ unit](#installing-the-daemon-as-systemd-unit).
 - Hackable (written in modern Python and code is kept to minimum)
 - Single playlist
     - Adding a file, URL, or directory tree
+    - Listing paths (use `grep` to filter)
     - Shuffling
     - Clearing
     - Deleting a single track
