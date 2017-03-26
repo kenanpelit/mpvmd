@@ -2,6 +2,38 @@ import random
 from typing import Optional, List
 
 
+class Randomizer:
+    def __init__(self, value_factory):
+        self.list = []
+        self.pos = None
+        self._get_value = value_factory
+
+    def next(self) -> int:
+        return self._jump(1)
+
+    def prev(self) -> int:
+        return self._jump(-1)
+
+    def _jump(self, delta: int) -> int:
+        if self.pos is None:
+            self.list = [self._get_value()]
+            self.pos = 0
+            return self.list[0]
+
+        self.pos += delta
+        if self.pos >= 0 and self.pos < len(self.list):
+            return self.list[self.pos]
+
+        ret = self._get_value()
+        if self.pos == -1:
+            self.pos = 0
+            self.list.insert(0, ret)
+            return ret
+        if self.pos == len(self.list):
+            self.list.append(ret)
+            return ret
+
+
 class Playlist:
     def __init__(self) -> None:
         self.random = False
@@ -9,7 +41,7 @@ class Playlist:
         self.items: List[str] = []
         self.current_index: Optional[int] = None
         self._deleted: Optional[str] = None
-        self._random_stack: List[int] = []
+        self._randomizer = Randomizer(self._get_random_track_number)
 
     @property
     def current_path(self) -> Optional[str]:
@@ -70,9 +102,8 @@ class Playlist:
 
         if self.random:
             if delta < 0:
-                return self._random_stack.pop()
-            ret = random.randint(0, len(self.items) - 1)
-            self._random_stack.append(ret)
+                return self._randomizer.prev()
+            return self._randomizer.next()
         elif self.current_index is None:
             if delta < 0:
                 ret = len(self.items) - 1
@@ -87,3 +118,6 @@ class Playlist:
         else:
             ret = self.current_index + delta
         return ret % len(self.items)
+
+    def _get_random_track_number(self):
+        return random.randint(0, len(self.items) - 1)

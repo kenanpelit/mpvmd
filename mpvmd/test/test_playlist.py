@@ -1,4 +1,22 @@
-from mpvmd.server.playlist import Playlist
+from mpvmd.server.playlist import Playlist, Randomizer
+
+
+def test_randomizer():
+    index = 0
+
+    def value_factory():
+        nonlocal index
+        index += 1
+        return index
+
+    randomizer = Randomizer(value_factory)
+    assert randomizer.next() == 1
+    assert randomizer.prev() == 2
+    assert randomizer.next() == 1
+    assert randomizer.next() == 3
+    assert randomizer.prev() == 1
+    assert randomizer.prev() == 2
+    assert randomizer.prev() == 4
 
 
 def test_prev():
