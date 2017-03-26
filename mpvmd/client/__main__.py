@@ -27,6 +27,7 @@ def normalize_metadata(metadata: Dict) -> Dict:
 async def show_info(reader, writer) -> None:
     await transport.write(writer, {'msg': 'info'})
     info = await transport.read(reader)
+    assert_status(info)
     metadata = normalize_metadata(info['metadata'])
 
     print('({}/{})   {}'.format(
