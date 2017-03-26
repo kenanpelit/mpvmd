@@ -23,6 +23,12 @@ class State:
         self.playlist = Playlist()
 
 
+def _wait_for_file_load(state: State):
+    # XXX: super lame
+    import time
+    time.sleep(0.1)
+
+
 def _stop_playback(state: State):
     try:
         state.mpv.playlist_remove()
@@ -56,14 +62,18 @@ class PlayCommand(Command):
         if 'file' in request:
             file = str(request['file'])
             state.mpv.play(file)
+            state.mpv.pause = False
+            _wait_for_file_load(state)
             logging.info('Playing %r', file)
         elif state.playlist.current_path is None:
             state.playlist.jump_next()
             state.mpv.play(state.playlist.current_path)
+            state.mpv.pause = False
+            _wait_for_file_load(state)
             logging.info('Starting playback: %r', state.playlist.current_path)
         else:
+            state.mpv.pause = False
             logging.info('Unpausing playback')
-        state.mpv.pause = False
         return {'status': 'ok'}
 
 
@@ -175,6 +185,7 @@ class PlaylistPrevCommand(Command):
         state.playlist.jump_prev()
         state.mpv.play(state.playlist.current_path)
         state.mpv.pause = False
+        _wait_for_file_load(state)
         logging.info(
             'Jumping to %r: %r',
             state.playlist.current_index,
@@ -189,6 +200,7 @@ class PlaylistNextCommand(Command):
         state.playlist.jump_next()
         state.mpv.play(state.playlist.current_path)
         state.mpv.pause = False
+        _wait_for_file_load(state)
         logging.info(
             'Jumping to %r: %r',
             state.playlist.current_index,
@@ -203,6 +215,7 @@ class PlaylistJumpCommand(Command):
         state.playlist.jump_to(int(request['index']))
         state.mpv.play(state.playlist.current_path)
         state.mpv.pause = False
+        _wait_for_file_load(state)
         logging.info(
             'Jumping to %r: %r',
             state.playlist.current_index,
@@ -298,8 +311,7 @@ def load_db(state: State, path: str):
             state.mpv.volume = obj['volume']
             if obj['playback']['path'] is not None:
                 state.mpv.play(obj['playback']['path'])
-                import time
-                time.sleep(0.1)  # XXX: super lame
+                _wait_for_file_load(state)
                 state.mpv.seek(obj['playback']['pos'], 'absolute')
                 state.mpv.pause = obj['playback']['pause']
     except Exception as error:
