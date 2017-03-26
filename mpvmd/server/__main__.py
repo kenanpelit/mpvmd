@@ -3,7 +3,7 @@ import argparse
 import asyncio
 import logging
 import pickle
-from typing import Dict, List
+from typing import Dict, Generator, List
 from mpv import MPV, MpvEventID
 from mpvmd import transport, settings, formatter
 from mpvmd.server.playlist import Playlist
@@ -39,6 +39,16 @@ def _stop_playback(state: State):
         state.mpv.seek('00:00')
     except SystemError:
         pass
+
+
+def _scan(dir: str) -> Generator[str, None, None]:
+    logging.debug('Traversing %s', dir)
+    for entry in os.scandir(dir):
+        if entry.is_dir(follow_symlinks=False):
+            for path in _scan(entry.path):
+                yield path
+        elif entry.name.lower().endswith(settings.EXTENSIONS):
+            yield entry.path
 
 
 class Command:
@@ -132,22 +142,14 @@ class PlaylistAddCommand(Command):
 
         added = 0
 
-        def scan(dir):
-            nonlocal added
-            logging.debug('Traversing %s', dir)
-            for entry in os.scandir(dir):
-                if entry.is_dir(follow_symlinks=False):
-                    scan(entry.path)
-                elif entry.name.lower().endswith(settings.EXTENSIONS):
-                    if index is not None:
-                        state.playlist.insert(entry.path, index + added)
-                    else:
-                        state.playlist.add(entry.path)
-                    added += 1
-
         for file in files:
             if os.path.isdir(file):
-                scan(file)
+                for path in sorted(_scan(file)):
+                    if index is not None:
+                        state.playlist.insert(path, index + added)
+                    else:
+                        state.playlist.add(path)
+                    added += 1
             else:
                 if index is not None:
                     state.playlist.insert(file, index)
