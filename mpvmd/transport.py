@@ -14,7 +14,12 @@ async def read(reader) -> Optional[Dict]:
     if not data_size_raw:
         return None
     data_size = struct.unpack('<I', data_size_raw)[0]
-    data = await reader.read(data_size)
+    data = b''
+    while len(data) < data_size:
+        chunk = await reader.read(data_size)
+        if not chunk:
+            raise ConnectionResetError()
+        data += chunk
     return json.loads(data.decode('utf-8'))
 
 
