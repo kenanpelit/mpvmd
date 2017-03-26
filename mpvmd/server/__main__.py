@@ -2,6 +2,7 @@ import os
 import argparse
 import asyncio
 import logging
+import pickle
 from typing import Dict, List
 from mpv import MPV, MpvEventID
 from mpvmd import transport, settings, formatter
@@ -283,9 +284,50 @@ def _event_cb(state: State, event: Dict):
         state.mpv.pause = False
 
 
-def run(host, port, loop):
+def load_db(state: State, path: str):
+    if not os.path.exists(path):
+        return
+    try:
+        with open(path, 'rb') as handle:
+            obj = pickle.load(handle)
+            state.playlist.items = obj['playlist']
+            if obj['index'] is not None:
+                state.playlist.jump_to(obj['index'])
+            state.playlist.random = obj['random']
+            state.playlist.loop = obj['loop']
+            state.mpv.volume = obj['volume']
+            if obj['playback']['path'] is not None:
+                state.mpv.play(obj['playback']['path'])
+                import time
+                time.sleep(0.1)  # XXX: super lame
+                state.mpv.seek(obj['playback']['pos'], 'absolute')
+                state.mpv.pause = obj['playback']['pause']
+    except Exception as error:
+        logging.exception(error)
+        return
+
+
+def store_db(state: State, path: str):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'wb') as handle:
+        pickle.dump({
+            'playlist': state.playlist.items,
+            'index': state.playlist.current_index,
+            'random': state.playlist.random,
+            'loop': state.playlist.loop,
+            'volume': state.mpv.volume,
+            'playback': {
+                'path': state.mpv.path.decode('utf-8'),
+                'pos': state.mpv.time_pos,
+                'pause': state.mpv.pause,
+            },
+        }, handle)
+
+
+def run(host, port, loop, db_path):
     state = State()
     state.mpv.register_event_callback(lambda event: _event_cb(state, event))
+    load_db(state, db_path)
 
     async def server_handler(reader, writer):
         addr = writer.get_extra_info('peername')
@@ -326,6 +368,7 @@ def run(host, port, loop):
     server.close()
     loop.run_until_complete(server.wait_closed())
     loop.close()
+    store_db(state, db_path)
     state.mpv.terminate()
 
 
@@ -333,6 +376,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='MPV music daemon client')
     parser.add_argument('--host', default=settings.HOST)
     parser.add_argument('-p', '--port', type=int, default=settings.PORT)
+    parser.add_argument(
+        '--db-path', type=str, default='~/.local/share/mpvmd/db.dat')
     return parser.parse_args()
 
 
@@ -340,10 +385,11 @@ def main():
     args = parse_args()
     host: str = args.host
     port: int = args.port
+    db_path: str = os.path.expanduser(args.db_path)
 
     logging.basicConfig(level=logging.INFO)
     loop = asyncio.get_event_loop()
-    run(host, port, loop)
+    run(host, port, loop, db_path)
 
 
 if __name__ == '__main__':
