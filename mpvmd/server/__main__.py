@@ -363,6 +363,9 @@ def run(host, port, loop, db_path):
 
                 logging.debug('%r: send %r', addr, response)
                 await transport.write(writer, response)
+            except ConnectionResetError as ex:
+                logging.exception(ex)
+                break
             except Exception as ex:
                 logging.exception(ex)
 
