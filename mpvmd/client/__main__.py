@@ -222,6 +222,19 @@ class ToggleLoopCommand(Command):
         await show_info(reader, writer)
 
 
+class SeekCommand(Command):
+    names = ['seek']
+
+    def decorate_arg_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument('where', type=str)
+
+    async def run(self, args: argparse.Namespace, reader, writer) -> None:
+        where: str = args.where
+        await transport.write(writer, {'msg': 'seek', 'where': where})
+        assert_status(await transport.read(reader))
+        await show_info(reader, writer)
+
+
 class SetVolumeCommand(Command):
     names = ['vol', 'volume']
 

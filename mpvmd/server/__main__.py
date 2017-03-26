@@ -4,7 +4,7 @@ import asyncio
 import logging
 from typing import Dict, List
 from mpv import MPV, MpvEventID
-from mpvmd import transport, settings
+from mpvmd import transport, settings, formatter
 from mpvmd.server.playlist import Playlist
 
 
@@ -242,6 +242,19 @@ class SetVolumeCommand(Command):
     def run(self, state: State, request) -> Dict:
         state.mpv.volume = float(request['volume'])
         logging.info('Setting volume to %r', state.mpv.volume)
+        return {'status': 'ok'}
+
+
+class SeekCommand(Command):
+    name = 'seek'
+
+    def run(self, state: State, request) -> Dict:
+        where = str(request['where'])
+        value, mode = formatter.parse_seek(where)
+        state.mpv.seek(value, mode)
+        logging.info(
+            'Seeking to %r',
+            formatter.format_duration(state.mpv.time_pos) or '-')
         return {'status': 'ok'}
 
 
