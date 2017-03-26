@@ -20,6 +20,9 @@ setup(
         'mpv',
         'parsimonious',
     ],
+    dependency_links=[
+        'git+ssh://git@github.com/jaseg/python-mpv.git#egg=mpv-0.1',
+    ],
 
     classifiers=[
         'Environment :: Console',

@@ -1,2 +1,2 @@
-MPV
 parsimonious
+git+https://github.com/jaseg/python-mpv.git

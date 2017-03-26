@@ -11,6 +11,7 @@ meant as an alternative to `mpd`+`mpc`.
 ```console
 $ git clone https://github.com/rr-/mpvmd
 $ cd mpvmd
+$ pip install --user --upgrade -r requirements.txt
 $ pip install --user --upgrade .
 $ mpvmd &>/dev/null &; disown
 $ mpvmc play somefile.mp3
