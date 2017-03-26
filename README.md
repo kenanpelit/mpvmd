@@ -46,7 +46,7 @@ unit](#installing-the-daemon-as-systemd-unit).
 ```console
 $ git clone https://github.com/mpv-player/mpv
 $ cd mpv
-$ ./waf configure --enable-libmpv
+$ ./waf configure --enable-libmpv-shared
 $ ./waf
 $ sudo ./waf install
 ```
