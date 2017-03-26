@@ -390,6 +390,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('-p', '--port', type=int, default=settings.PORT)
     parser.add_argument(
         '--db-path', type=str, default='~/.local/share/mpvmd/db.dat')
+    parser.add_argument('-d', '--debug', action='store_true')
     return parser.parse_args()
 
 
@@ -398,8 +399,9 @@ def main():
     host: str = args.host
     port: int = args.port
     db_path: str = os.path.expanduser(args.db_path)
+    debug: bool = args.debug
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
     loop = asyncio.get_event_loop()
     run(host, port, loop, db_path)
 
