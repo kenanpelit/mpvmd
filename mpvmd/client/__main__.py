@@ -34,17 +34,23 @@ async def show_info(reader, writer) -> None:
         '-' if info['playlist-pos'] is None else info['playlist-pos'],
         info['playlist-size'] or '-',
         info['path'] or '-'))
-    print('Artist:   {}'.format(metadata.get('artist') or '?'))
-    print('Date:     {}'.format(metadata.get('date') or '?'))
-    print('Album:    {}'.format(metadata.get('album') or '?'))
-    if '/' in metadata.get('track', ''):
-        print('Track:    {}'.format(metadata.get('track') or '?'))
+    if 'icy-name' in metadata:
+        print('URL:      {}'.format(metadata.get('icy-url') or '?'))
+        print('Name:     {}'.format(metadata.get('icy-name') or '?'))
+        print('Title:    {}'.format(metadata.get('icy-title') or '?'))
     else:
-        print('Track:    {}/{}'.format(
-            metadata.get('track') or '?',
-            metadata.get('tracktotal') or '?'))
-    print('Title:    {}'.format(metadata.get('title') or '?'))
+        print('Artist:   {}'.format(metadata.get('artist') or '?'))
+        print('Date:     {}'.format(metadata.get('date') or '?'))
+        print('Album:    {}'.format(metadata.get('album') or '?'))
+        if '/' in metadata.get('track', ''):
+            print('Track:    {}'.format(metadata.get('track') or '?'))
+        else:
+            print('Track:    {}/{}'.format(
+                metadata.get('track') or '?',
+                metadata.get('tracktotal') or '?'))
+        print('Title:    {}'.format(metadata.get('title') or '?'))
     print()
+
     print('Playback: {}'.format(
         formatter.format_duration(info['time-pos']) or '-'))
     print('Duration: {}'.format(
