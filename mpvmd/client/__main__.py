@@ -30,10 +30,12 @@ async def show_info(reader, writer) -> None:
     assert_status(info)
     metadata = normalize_metadata(info['metadata'])
 
-    print('({}/{})   {}'.format(
+    print('({}/{}) {}'.format(
         '-' if info['playlist-pos'] is None else info['playlist-pos'],
         info['playlist-size'] or '-',
         info['path'] or '-'))
+    print()
+
     if 'icy-name' in metadata:
         print('URL:      {}'.format(metadata.get('icy-url') or '?'))
         print('Name:     {}'.format(metadata.get('icy-name') or '?'))
