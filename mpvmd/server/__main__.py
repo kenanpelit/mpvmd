@@ -3,8 +3,8 @@ import argparse
 import asyncio
 import logging
 import pickle
-from typing import Dict, Generator, List
-from mpv import MPV, MpvEventID
+from typing import Dict, Generator, List, Optional
+import mpv
 from mpvmd import transport, settings, formatter
 from mpvmd.server.playlist import Playlist
 
@@ -17,28 +17,110 @@ MPV_END_FILE_REASON_ERROR = 4
 
 class State:
     def __init__(self):
-        self.mpv = MPV(ytdl=True)
-        self.mpv.video = 'no'
-        self.mpv.pause = True
         self.playlist = Playlist()
+        self._mpv = mpv.Context(ytdl=True)
+        self._mpv.set_option('video', 'no')
+        self._mpv.set_option('pause', True)
+        self._mpv.initialize()
+        self._mpv.set_wakeup_callback(self._event_cb)
 
+    @property
+    def path(self) -> Optional[str]:
+        try:
+            return self._mpv.get_property('path')
+        except mpv.MPVError:
+            return None
 
-def _wait_for_file_load(state: State):
-    # XXX: super lame
-    import time
-    time.sleep(0.1)
+    @property
+    def time_pos(self) -> Optional[int]:
+        try:
+            return self._mpv.get_property('time-pos')
+        except mpv.MPVError:
+            return None
 
+    @property
+    def duration(self) -> Optional[int]:
+        try:
+            return self._mpv.get_property('duration')
+        except mpv.MPVError:
+            return None
 
-def _stop_playback(state: State):
-    try:
-        state.mpv.playlist_remove()
-    except SystemError:
-        pass
-    state.mpv.pause = True
-    try:
-        state.mpv.seek('00:00')
-    except SystemError:
-        pass
+    @property
+    def metadata(self) -> Optional[Dict]:
+        try:
+            return self._mpv.get_property('metadata')
+        except mpv.MPVError:
+            return None
+
+    @property
+    def pause(self) -> bool:
+        return self._mpv.get_property('pause')
+
+    @pause.setter
+    def pause(self, value: bool):
+        self._mpv.set_property('pause', value)
+
+    @property
+    def volume(self) -> float:
+        return self._mpv.get_property('volume')
+
+    @volume.setter
+    def volume(self, value: float):
+        self._mpv.set_property('volume', value)
+
+    def seek(self, origin: str, mode: Optional[str] = None):
+        self._mpv.command('seek', origin, mode)
+
+        def wait_for_seek() -> None:
+            # XXX: super lame
+            import time
+            time.sleep(0.1)
+
+        wait_for_seek()
+
+    def play(self, file: str):
+        self._mpv.command('loadfile', file)
+        self.pause = False
+
+        def wait_for_file_load() -> None:
+            # XXX: super lame
+            import time
+            time.sleep(0.1)
+
+        wait_for_file_load()
+
+    def stop_playback(self) -> None:
+        self._mpv.command('playlist-clear')
+        self.pause = True
+
+        def wait_for_file_end() -> None:
+            # XXX: super lame
+            import time
+            time.sleep(0.1)
+
+        wait_for_file_end()
+
+    def _event_cb(self) -> None:
+        while self._mpv:
+            event = self._mpv.wait_event(.01)
+            if event.id == mpv.Events.none:
+                break
+
+            if event.id == mpv.Events.end_file \
+                    and event.data.reason in (
+                        MPV_END_FILE_REASON_EOF,
+                        MPV_END_FILE_REASON_ERROR):
+                self._next_file()
+
+    def _next_file(self) -> None:
+        try:
+            self.playlist.jump_next()
+        except ValueError:
+            self.stop_playback()
+            logging.info('No more files to play')
+            return
+        logging.info('Playing next file (%s)...', self.playlist.current_path)
+        self.play(self.playlist.current_path)
 
 
 def _scan(dir: str) -> Generator[str, None, None]:
@@ -71,18 +153,14 @@ class PlayCommand(Command):
     def run(self, state: State, request) -> Dict:
         if 'file' in request:
             file = str(request['file'])
-            state.mpv.play(file)
-            state.mpv.pause = False
-            _wait_for_file_load(state)
+            state.play(file)
             logging.info('Playing %r', file)
         elif state.playlist.current_path is None:
             state.playlist.jump_next()
-            state.mpv.play(state.playlist.current_path)
-            state.mpv.pause = False
-            _wait_for_file_load(state)
+            state.play(state.playlist.current_path)
             logging.info('Starting playback: %r', state.playlist.current_path)
         else:
-            state.mpv.pause = False
+            state.pause = False
             logging.info('Unpausing playback')
         return {'status': 'ok'}
 
@@ -95,17 +173,14 @@ class InfoCommand(Command):
             'status': 'ok',
             'playlist-pos': state.playlist.current_index,
             'playlist-size': len(state.playlist),
-            'paused': state.mpv.pause,
+            'paused': state.pause,
             'random': state.playlist.random,
             'loop': state.playlist.loop,
-            'volume': state.mpv.volume,
-            'path': state.mpv.path,
-            'time-pos': state.mpv.time_pos,
-            'duration': state.mpv.duration,
-            'metadata': (
-                state.mpv.metadata
-                if state.mpv.playlist_count > 0
-                else None) or {},
+            'volume': state.volume,
+            'path': state.path,
+            'time-pos': state.time_pos,
+            'duration': state.duration,
+            'metadata': state.metadata or {},
         }
 
 
@@ -113,7 +188,7 @@ class PauseCommand(Command):
     name = 'pause'
 
     def run(self, state: State, _request) -> Dict:
-        state.mpv.pause = True
+        state.pause = True
         logging.info('Pausing playback')
         return {'status': 'ok'}
 
@@ -122,7 +197,7 @@ class StopCommand(Command):
     name = 'stop'
 
     def run(self, state: State, _request) -> Dict:
-        _stop_playback(state)
+        state.stop_playback()
         logging.info('Stopping playback')
         return {'status': 'ok'}
 
@@ -195,9 +270,7 @@ class PlaylistPrevCommand(Command):
 
     def run(self, state: State, _request) -> Dict:
         state.playlist.jump_prev()
-        state.mpv.play(state.playlist.current_path)
-        state.mpv.pause = False
-        _wait_for_file_load(state)
+        state.play(state.playlist.current_path)
         logging.info(
             'Jumping to %r: %r',
             state.playlist.current_index,
@@ -210,9 +283,7 @@ class PlaylistNextCommand(Command):
 
     def run(self, state: State, _request) -> Dict:
         state.playlist.jump_next()
-        state.mpv.play(state.playlist.current_path)
-        state.mpv.pause = False
-        _wait_for_file_load(state)
+        state.play(state.playlist.current_path)
         logging.info(
             'Jumping to %r: %r',
             state.playlist.current_index,
@@ -225,9 +296,7 @@ class PlaylistJumpCommand(Command):
 
     def run(self, state: State, request) -> Dict:
         state.playlist.jump_to(int(request['index']))
-        state.mpv.play(state.playlist.current_path)
-        state.mpv.pause = False
-        _wait_for_file_load(state)
+        state.play(state.playlist.current_path)
         logging.info(
             'Jumping to %r: %r',
             state.playlist.current_index,
@@ -266,8 +335,8 @@ class SetVolumeCommand(Command):
     name = 'volume'
 
     def run(self, state: State, request) -> Dict:
-        state.mpv.volume = float(request['volume'])
-        logging.info('Setting volume to %r', state.mpv.volume)
+        state.volume = float(request['volume'])
+        logging.info('Setting volume to %r', state.volume)
         return {'status': 'ok'}
 
 
@@ -277,10 +346,11 @@ class SeekCommand(Command):
     def run(self, state: State, request) -> Dict:
         where = str(request['where'])
         value, mode = formatter.parse_seek(where)
-        state.mpv.seek(value, mode)
+        state.seek(str(value), mode)
         logging.info(
             'Seeking to %r',
-            formatter.format_duration(state.mpv.time_pos) or '-')
+            formatter.format_duration(state.time_pos)
+            or '-')
         return {'status': 'ok'}
 
 
@@ -294,21 +364,6 @@ def _get_command(name: str) -> Command:
         raise ValueError('Invalid operation')
 
 
-def _event_cb(state: State, event: Dict):
-    if (event['event_id'] == MpvEventID.END_FILE
-            and event['event']['reason'] in (
-                MPV_END_FILE_REASON_EOF, MPV_END_FILE_REASON_ERROR)):
-        try:
-            state.playlist.jump_next()
-        except ValueError:
-            _stop_playback(state)
-            logging.info('No more files to play')
-            return
-        logging.info('Playing next file (%s)...', state.playlist.current_path)
-        state.mpv.loadfile(state.playlist.current_path)
-        state.mpv.pause = False
-
-
 def load_db(state: State, path: str):
     if not os.path.exists(path):
         return
@@ -320,12 +375,11 @@ def load_db(state: State, path: str):
                 state.playlist.jump_to(obj['index'])
             state.playlist.random = obj['random']
             state.playlist.loop = obj['loop']
-            state.mpv.volume = obj['volume']
+            state.volume = obj['volume']
             if obj['playback']['path'] is not None:
-                state.mpv.play(obj['playback']['path'])
-                _wait_for_file_load(state)
-                state.mpv.seek(obj['playback']['pos'], 'absolute')
-                state.mpv.pause = obj['playback']['pause']
+                state.play(obj['playback']['path'])
+                state.pause = obj['playback']['pause']
+                state.seek(obj['playback']['pos'], 'absolute')
     except Exception as error:
         logging.exception(error)
         return
@@ -339,18 +393,17 @@ def store_db(state: State, path: str):
             'index': state.playlist.current_index,
             'random': state.playlist.random,
             'loop': state.playlist.loop,
-            'volume': state.mpv.volume,
+            'volume': state.volume,
             'playback': {
-                'path': state.mpv.path.decode('utf-8'),
-                'pos': state.mpv.time_pos,
-                'pause': state.mpv.pause,
+                'path': state.path,
+                'pos': state.time_pos,
+                'pause': state.pause,
             },
         }, handle)
 
 
 def run(host, port, loop, db_path):
     state = State()
-    state.mpv.register_event_callback(lambda event: _event_cb(state, event))
     load_db(state, db_path)
 
     async def server_handler(reader, writer):
@@ -396,7 +449,6 @@ def run(host, port, loop, db_path):
     loop.run_until_complete(server.wait_closed())
     loop.close()
     store_db(state, db_path)
-    state.mpv.terminate()
 
 
 def parse_args() -> argparse.Namespace:
