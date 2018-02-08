@@ -293,7 +293,7 @@ class PrintCommand(Command):
         metadata = normalize_metadata(info['metadata'])
 
         templates = {
-            'title': metadata.get('title'),
+            'title': metadata.get('title') or metadata.get('icy-title'),
             'date': metadata.get('date'),
             'artist': metadata.get('artist'),
             'album': metadata.get('album'),
